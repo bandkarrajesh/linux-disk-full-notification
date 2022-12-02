@@ -1,0 +1,39 @@
+# Installation of mailx
+yum install -y mailx
+ln -s /bin/mailx /bin/email
+
+# Edit mail server details
+vi /etc/mail.rc
+
+set smtp-use-starttls
+set ssl-verify=ignore
+# set smtp=smtp://smtp.server.tld:port_number
+set smtp=smtp://smtp.gmail.com:587
+# tell mailx that it needs to authorise
+set smtp-auth=login
+# set the user for SMTP
+# set smtp-auth-user=user@domain.tld
+set smtp-auth-user=admin-user@gmail.com
+# set the password for authorisation
+set smtp-auth-password=password
+
+# Start crond service
+service crond start
+service crond status
+systemctl enable crond
+
+# save below script to path:
+vi /etc/cron.hourly/disk-alert
+
+#!/bin/bash
+CURRENT=$(df / | grep / | awk '{ print $5}' | sed 's/%//g')
+THRESHOLD=5
+
+if [ "$CURRENT" -gt "$THRESHOLD" ] ; then
+df -h > /var/log/disk-log.txt
+(
+echo -e "Dear sir,\n\nYour root partition remaining free space is critically low. Used: "$CURRENT" %.\n"
+echo -e "Thanks,\nSystem Admin") | mail -s "Disk low alert : 149.19.18.17" -a /var/log/disk-log.txt admin-user@gmail.com
+fi
+
+chmod +x /etc/cron.hourly/disk-alert
